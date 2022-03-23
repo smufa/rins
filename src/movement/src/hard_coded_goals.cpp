@@ -11,6 +11,8 @@
 #include <move_base_msgs/MoveBaseAction.h>
 #include <actionlib/client/simple_action_client.h>
 #include <memory>
+#include <unistd.h>
+#include <stdlib.h>
 
 using namespace std;
 using namespace cv;
@@ -104,13 +106,29 @@ void moveTo(int x, int y) {
 
     move_base_msgs::MoveBaseGoal goal;
 
-    goal.target_pose.header.frame_id = "map";
-    goal.target_pose.pose.orientation.w = 1;
     goal.target_pose.pose.position.x = transformed_pt.x;
     goal.target_pose.pose.position.y = transformed_pt.y;
+    goal.target_pose.header.frame_id = "map";
+    goal.target_pose.pose.orientation.w = 1;
     goal.target_pose.header.stamp = ros::Time::now();
 
     ROS_INFO("Moving to (x: %f, y: %f)", transformed_pt.x, transformed_pt.y);
+
+    ac->sendGoal(goal);
+}
+
+void moveToSimple(float x, float y) {
+    move_base_msgs::MoveBaseGoal goal;
+
+    //goal.target_pose.pose.position.x = transformed_pt.x;
+    //goal.target_pose.pose.position.y = transformed_pt.y;
+    goal.target_pose.header.frame_id = "map";
+    goal.target_pose.pose.orientation.w = 1;
+    goal.target_pose.pose.position.x = x;//0.81709517829633;
+    goal.target_pose.pose.position.y = y;//-1.8027234797784577;
+    goal.target_pose.header.stamp = ros::Time::now();
+
+    ROS_INFO("Moving to (x: %f, y: %f)", x, y);
 
     ac->sendGoal(goal);
 }
@@ -127,6 +145,10 @@ int main(int argc, char** argv) {
     while(!ac->waitForServer(ros::Duration(5.0))){
       ROS_INFO("Waiting for the move_base action server to come up");
     }
+    if(argc > 2) {
+        moveToSimple(atof(argv[1]), atof(argv[2]));
+        return 0;
+    }
     
     int goals[8][2] = {
         {286, 268},
@@ -140,12 +162,12 @@ int main(int argc, char** argv) {
     };
     //int goals[5][2] = {{250, 200}, {258, 230}, {284, 263}, {324, 250}, {291, 225}};
 
-    //ros::spinOnce();
     for(int i = 0; i < 8; i++) {
         ros::spinOnce();
         moveTo(goals[i][0], goals[i][1]);
         while(!ac->getState().isDone()) {
             //face detection
+            if(!ros::ok()) return 0;
             ros::spinOnce();
         }/* {
             ROS_INFO("Status is %s", ac->getState().toString().c_str());
