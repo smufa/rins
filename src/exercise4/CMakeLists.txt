@@ -10,11 +10,27 @@ find_package(catkin REQUIRED COMPONENTS
 	nav_msgs
 	std_msgs
 	geometry_msgs
+	message_generation
 )
 
 find_package( OpenCV REQUIRED )
 
-catkin_package()
+# catkin_package()
+
+## Generate messages in the 'msg' folder
+add_message_files(
+  FILES
+  Poses.msg
+)
+
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+)
+
+catkin_package(
+#   CATKIN_DEPENDS message_runtime ...
+)
 
 #include_directories(include ${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
 #add_executable(map_goals src/map_goals.cpp)

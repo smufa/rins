@@ -8,6 +8,8 @@ import numpy as np
 import tf2_geometry_msgs
 import tf2_ros
 import face_recognition
+from std_msgs.msg import String
+from exercise4.msg import Poses
 
 #import matplotlib.pyplot as plt
 from sensor_msgs.msg import Image
@@ -15,6 +17,13 @@ from geometry_msgs.msg import PointStamped, Vector3, Pose
 from cv_bridge import CvBridge, CvBridgeError
 from visualization_msgs.msg import Marker, MarkerArray
 from std_msgs.msg import ColorRGBA
+
+#!/usr/bin/env python
+# license removed for brevity
+import rospy
+from std_msgs.msg import String
+# from geometry_msgs.msg import 
+
 
 class face_group_holdr:
     def __init__(self, encodings, marker, poses):
@@ -47,6 +56,9 @@ class face_group_holdr:
 class face_localizer:
     def __init__(self):
         rospy.init_node('face_localizer', anonymous=True)
+        
+        # Create a publisher for publishing goals
+        self.face_pub = rospy.Publisher('/faceMarkers', Poses, queue_size=10)        
 
         # An object we use for converting images between ROS format and OpenCV format
         self.bridge = CvBridge()
@@ -241,7 +253,7 @@ class face_localizer:
             
             # Find the location of the detected face
             pose = self.get_pose((x1,x2,y1,y2), face_distance, depth_time)
-            #print(pose)
+            print(pose)
             if face_id is not None:
                 self.known_faces[face_id].poses.append(pose)
             
@@ -252,7 +264,17 @@ class face_localizer:
            
             if pose is not None:
                markerArray.markers.append(deleteMarker)
-               for obj in self.known_faces:
+               for i, obj in enumerate(self.known_faces):
+                    # broadcast img positions
+                    # TOODOOOO ORIENTATIONSSSSS
+                    ps = Poses()
+                    # print(ps)
+                    ps.x = obj.getAverage().position.x
+                    ps.y = obj.getAverage().position.y
+                    ps.z = obj.getAverage().position.z
+                    ps.id = i
+                    self.face_pub.publish(ps)
+                    
                     self.marker_num += 1
                     marker = Marker()
                     marker.header.stamp = rospy.Time(0)
@@ -270,7 +292,6 @@ class face_localizer:
                    
             #self.markers_pub.publish(deleteMarker)       
             self.markers_pub.publish(markerArray)
-            
     
     def depth_callback(self,data):
 
@@ -293,7 +314,7 @@ class face_localizer:
         #plt.show()
 
 def main():
-
+        # talker()
         face_finder = face_localizer()
 
         rate = rospy.Rate(1)
