@@ -7,7 +7,10 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
-#include <actionlib_msgs/GoalStatusArray.h>
+#include <move_base_msgs/MoveBaseActionGoal.h>
+#include <move_base_msgs/MoveBaseAction.h>
+#include <actionlib/client/simple_action_client.h>
+#include <memory>
 
 using namespace std;
 using namespace cv;
@@ -18,8 +21,7 @@ geometry_msgs::TransformStamped map_transform;
 
 ros::Publisher goal_pub;
 ros::Subscriber map_sub;
-ros::Subscriber status_sub;
-uint8_t statusOfRoute;
+std::unique_ptr<actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction>> ac;
 
 void mapCallback(const nav_msgs::OccupancyGridConstPtr& msg_map) {
     ROS_INFO("Callback triggered");
@@ -80,13 +82,6 @@ void mapCallback(const nav_msgs::OccupancyGridConstPtr& msg_map) {
 
 }
 
-void statusCallback(const actionlib_msgs::GoalStatusArrayPtr& status) {
-    if(status->status_list.size() > 0){
-        statusOfRoute = status->status_list[0].status;
-    }
-    // ROS_INFO("Shitshow %d", 0);
-}
-
 void moveTo(int x, int y) {
 
     int v = (int)cv_map.at<unsigned char>(y, x);
@@ -96,7 +91,6 @@ void moveTo(int x, int y) {
 		return;
 	}
 
-    ROS_INFO("resolution is %f", map_resolution);
     geometry_msgs::Point pt;
     geometry_msgs::Point transformed_pt;
 
@@ -108,17 +102,17 @@ void moveTo(int x, int y) {
     
     //geometry_msgs::Point transformed = map_transform * pt;
 
-    geometry_msgs::PoseStamped goal;
+    move_base_msgs::MoveBaseGoal goal;
 
-    goal.header.frame_id = "map";
-    goal.pose.orientation.w = 1;
-    goal.pose.position.x = transformed_pt.x;
-    goal.pose.position.y = transformed_pt.y;
-    goal.header.stamp = ros::Time::now();
+    goal.target_pose.header.frame_id = "map";
+    goal.target_pose.pose.orientation.w = 1;
+    goal.target_pose.pose.position.x = transformed_pt.x;
+    goal.target_pose.pose.position.y = transformed_pt.y;
+    goal.target_pose.header.stamp = ros::Time::now();
 
     ROS_INFO("Moving to (x: %f, y: %f)", transformed_pt.x, transformed_pt.y);
 
-    goal_pub.publish(goal);
+    ac->sendGoal(goal);
 }
 
 int main(int argc, char** argv) {
@@ -129,9 +123,11 @@ int main(int argc, char** argv) {
 	ros::Rate rate(10);
 
     map_sub = n.subscribe("map", 10, &mapCallback);
-    status_sub = n.subscribe("/move_base/status", 10, &statusCallback);
-    goal_pub = n.advertise<geometry_msgs::PoseStamped>("/move_base_simple/goal", 10);
-
+    ac = std::make_unique<actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction>>("move_base", true);
+    while(!ac->waitForServer(ros::Duration(5.0))){
+      ROS_INFO("Waiting for the move_base action server to come up");
+    }
+    
     int goals[8][2] = {
         {286, 268},
         {246, 232},
@@ -144,27 +140,18 @@ int main(int argc, char** argv) {
     };
     //int goals[5][2] = {{250, 200}, {258, 230}, {284, 263}, {324, 250}, {291, 225}};
 
-    int i = 0;
-    int Moving = 0;
-    while(ros::ok()) {
+    //ros::spinOnce();
+    for(int i = 0; i < 8; i++) {
         ros::spinOnce();
-        
-        // ta Moving je zato ker ko mu das ukaz da se premakne ne zacne takoj
-        // in mores pol cakat da se zacne premikat da lahko spet cakas da je 
-        // status 3
-        ROS_INFO("Status : %d", statusOfRoute);
-        if (statusOfRoute == 3 && !Moving && i < 8) {
-            Moving = 1;
-            moveTo(goals[i][0], goals[i][1]);
-            i++;
-        }
-        
-        if (Moving && statusOfRoute == 1) {
-            Moving = 0;
-        }
-
-        rate.sleep();
+        moveTo(goals[i][0], goals[i][1]);
+        while(!ac->getState().isDone()) {
+            //face detection
+            ros::spinOnce();
+        }/* {
+            ROS_INFO("Status is %s", ac->getState().toString().c_str());
+        }*/
+        ROS_INFO("%s", ac->getState().getText().c_str());
     }
-    return 0;
 
+    return 0;
 }
