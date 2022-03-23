@@ -36,7 +36,7 @@
   </node>
 
   <!-- Map server -->
-  <arg name="map_file" default="/home/ana/Documents/3letnik/2semester/RINS/best_map.yaml"/>
+  <arg name="map_file" default="$(dirname)/../../../best_map.yaml"/>
   <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" />
 
   <!-- Localization -->
@@ -52,5 +52,5 @@
   <!-- Move base -->
   <include file="$(find turtlebot_navigation)/launch/includes/move_base.launch.xml"/>
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find turtlebot_rviz_launchers)/rviz/navigation.rviz"/>
-  <rosparam file="/home/ana/Documents/3letnik/2semester/RINS/neki.yaml"/> 
+  <rosparam file="neki.yaml"/> 
 </launch>
