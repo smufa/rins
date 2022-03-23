@@ -17,13 +17,32 @@ from visualization_msgs.msg import Marker, MarkerArray
 from std_msgs.msg import ColorRGBA
 
 class face_group_holdr:
-    def __init__(self):
-        self.id = None
-        self.encoding = []
-        self.prev_marker = None
-        self.poses = []
+    def __init__(self, encodings, marker, poses):
+        self.encodings = encodings
+        self.marker = marker
+        self.poses = poses
     
-
+    def getAverage(self):
+        xSum = 0
+        ySum = 0
+        zSum = 0
+        
+        for p in self.poses:
+            if p is not None:
+                xSum += p.position.x
+                ySum += p.position.y
+                zSum += p.position.z
+            else: 
+                print("NoneType sm dobu")
+        
+        l = len(self.poses)
+        
+        newPose = Pose()
+        newPose.position.x = xSum/l
+        newPose.position.y = ySum/l
+        newPose.position.z = zSum/l 
+        
+        return newPose
 
 class face_localizer:
     def __init__(self):
@@ -55,7 +74,25 @@ class face_localizer:
 
         self.known_faces = []
 
+    def create_marker(self, newPose):
+            self.marker_num += 1
+            marker = Marker()
+            marker.header.stamp = rospy.Time(0)
+            marker.header.frame_id = 'map'
+            marker.pose = newPose
+            marker.type = Marker.SPHERE
+            marker.action = Marker.ADD
+            marker.frame_locked = False
+            marker.lifetime = rospy.Time(0)
+            marker.id = self.marker_num
+            marker.scale = Vector3(0.1, 0.1, 0.1)
+            marker.color = ColorRGBA(0, 1, 0, 1)
 
+            #self.marker_array.markers.append(marker)
+
+            #self.markers_pub.publish(self.marker_array)
+            return marker
+    
     def get_pose(self,coords,dist,stamp):
         # Calculate the position of the detected face
 
@@ -178,26 +215,34 @@ class face_localizer:
                 encoding = encoding[0]
             else:
                 continue
-            face_id = -1
-
+            
+            face_id = None
+            
             if(len(encoding) > 0):
                 
                 face_found = False
                 # see if it fits with any other face
-                for i,face_group in enumerate(self.known_faces):
+                for i, object in enumerate(self.known_faces):
+                    face_group = object.encodings
                     #print(len(face_group), "dolzina")
                     truz = np.sum(face_recognition.compare_faces(face_group, encoding, tolerance=0.6))
 
                     if truz > (len(face_group)-truz):
                         #print("appendam facooo")
                         face_found = True
-                        if len(self.known_faces[i]) <= 20: 
-                            self.known_faces[i].append(encoding)
+                        #if len(self.known_faces[i]) <= 20: 
+                            #self.known_faces[i].append(encoding)
+                        if len(face_group) <= 20: 
+                            self.known_faces[i].encodings.append(encoding)
+                            face_id = i
+                        else: 
+                            continue
                         print("st zaznanih fac: ", len(self.known_faces))
                         break
                 if not face_found:
                     # zazna je bila nova faca
-                    self.known_faces.append(face_group_holdr())
+                    self.known_faces.append(face_group_holdr([encoding], None, []))
+                    face_id = len(self.known_faces)-1
                     #self.known_faces.append([encoding])
             else:
                 continue
@@ -207,34 +252,23 @@ class face_localizer:
             
             # Find the location of the detected face
             pose = self.get_pose((x1,x2,y1,y2), face_distance, depth_time)
-
+            
+            self.known_faces[face_id].poses.append(pose)
+            
+            markerArray = MarkerArray()
+            deleteMarker =  Marker()
+            deleteMarker.header.frame_id = 'map'
+            deleteMarker.action = Marker.DELETEALL
+           
             if pose is not None:
-
-                # Create a marker used for visualization
-                self.marker_num += 1
-                marker = Marker()
-                marker.header.stamp = rospy.Time(0)
-                marker.header.frame_id = 'map'
-                marker.pose = pose
-                marker.type = Marker.SPHERE
-                marker.action = Marker.ADD
-                marker.frame_locked = False
-                marker.lifetime = rospy.Time(0)
-                marker.id = self.marker_num
-                marker.scale = Vector3(0.1, 0.1, 0.1)
-                marker.color = ColorRGBA(0, 1, 0, 1)
-                self.marker_array.markers.append(marker)
-
-                self.markers_pub.publish(self.marker_array)
-
-                rospy.sleep(3)
-
-                marker.action = Marker.DELETE
-
-                self.markers_pub.publish(self.marker_array)
-
-
-
+               markerArray.markers.append(deleteMarker)
+               for obj in self.known_faces:
+                   markerArray.markers.append(self.create_marker(obj.getAverage()))
+                   
+            #self.markers_pub.publish(deleteMarker)       
+            self.markers_pub.publish(markerArray)
+            
+    
     def depth_callback(self,data):
 
         try:
