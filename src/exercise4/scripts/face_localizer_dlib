@@ -75,18 +75,7 @@ class face_localizer:
         self.known_faces = []
 
     def create_marker(self, newPose):
-            self.marker_num += 1
-            marker = Marker()
-            marker.header.stamp = rospy.Time(0)
-            marker.header.frame_id = 'map'
-            marker.pose = newPose
-            marker.type = Marker.SPHERE
-            marker.action = Marker.ADD
-            marker.frame_locked = False
-            marker.lifetime = rospy.Time(0)
-            marker.id = self.marker_num
-            marker.scale = Vector3(0.1, 0.1, 0.1)
-            marker.color = ColorRGBA(0, 1, 0, 1)
+            
 
             #self.marker_array.markers.append(marker)
 
@@ -172,10 +161,10 @@ class face_localizer:
         self.dims = rgb_image.shape
 
         # Tranform image to gayscale
-        #gray = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2GRAY)
+        gray = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2GRAY)
 
         # Do histogram equlization
-        #img = cv2.equalizeHist(gray)
+        img = cv2.equalizeHist(gray)
 
         # Detect the faces in the image
         face_rectangles = self.face_detector(rgb_image, 0)
@@ -202,8 +191,8 @@ class face_localizer:
 
             face_distance = float(np.nanmean(depth_image[y1:y2,x1:x2]))
 
-            if face_distance >= 1.1:
-                continue
+            # if face_distance >= 1.1:
+            #     continue
 
             boxes = face_recognition.face_locations(face_region, model='hog')
             encoding = face_recognition.face_encodings(face_region, boxes)
@@ -225,7 +214,7 @@ class face_localizer:
                 for i, object in enumerate(self.known_faces):
                     face_group = object.encodings
                     #print(len(face_group), "dolzina")
-                    truz = np.sum(face_recognition.compare_faces(face_group, encoding, tolerance=0.6))
+                    truz = np.sum(face_recognition.compare_faces(face_group, encoding, tolerance=0.5))
 
                     if truz > (len(face_group)-truz):
                         #print("appendam facooo")
@@ -252,8 +241,9 @@ class face_localizer:
             
             # Find the location of the detected face
             pose = self.get_pose((x1,x2,y1,y2), face_distance, depth_time)
-            
-            self.known_faces[face_id].poses.append(pose)
+            #print(pose)
+            if face_id is not None:
+                self.known_faces[face_id].poses.append(pose)
             
             markerArray = MarkerArray()
             deleteMarker =  Marker()
@@ -263,7 +253,20 @@ class face_localizer:
             if pose is not None:
                markerArray.markers.append(deleteMarker)
                for obj in self.known_faces:
-                   markerArray.markers.append(self.create_marker(obj.getAverage()))
+                    self.marker_num += 1
+                    marker = Marker()
+                    marker.header.stamp = rospy.Time(0)
+                    marker.header.frame_id = 'map'
+                    marker.pose = obj.getAverage()
+                    marker.type = Marker.SPHERE
+                    marker.action = Marker.ADD
+                    marker.frame_locked = False
+                    marker.lifetime = rospy.Time(0)
+                    marker.id = self.marker_num
+                    marker.scale = Vector3(0.1, 0.1, 0.1)
+                    marker.color = ColorRGBA(0, 1, 0, 1)
+                    
+                    markerArray.markers.append(marker)
                    
             #self.markers_pub.publish(deleteMarker)       
             self.markers_pub.publish(markerArray)
