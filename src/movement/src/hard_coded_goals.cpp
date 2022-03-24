@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include "exercise4/Coords.h"
+#include <sound_play/sound_play.h>
 
 using namespace std;
 using namespace cv;
@@ -26,6 +27,7 @@ geometry_msgs::TransformStamped map_transform;
 ros::Publisher goal_pub;
 ros::Subscriber map_sub;
 ros::Subscriber face_sub;
+std::unique_ptr<sound_play::SoundClient> sound;
 std::unique_ptr<actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction>> ac;
 
 void mapCallback(const nav_msgs::OccupancyGridConstPtr& msg_map) {
@@ -154,6 +156,7 @@ void move(float x, float y, float z, float orientx, float orienty, float orientz
     ROS_INFO("Moving to (x: %f, y: %f)", x, y);
 
     ac->sendGoalAndWait(goal);
+    sound->say("Hello bananana");
 }
 
 void faceCallback(const exercise4::Coords goal) {
@@ -172,6 +175,7 @@ int main(int argc, char** argv) {
     map_sub = n.subscribe("map", 10, &mapCallback);
     face_sub = n.subscribe("faceMarkers", 10, &faceCallback);
     ac = std::make_unique<actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction>>("move_base", true);
+    sound = std::make_unique<sound_play::SoundClient>();
     while(!ac->waitForServer(ros::Duration(5.0))){
       ROS_INFO("Waiting for the move_base action server to come up");
     }

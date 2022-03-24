@@ -85,6 +85,7 @@ class face_localizer:
         self.tf_listener = tf2_ros.TransformListener(self.tf_buf)
 
         self.known_faces = []
+        self.added = []
 
     def create_marker(self, newPose):
             
@@ -252,7 +253,9 @@ class face_localizer:
             depth_time = depth_image_message.header.stamp
             
             # Find the location of the detected face
-            pose = self.get_pose((x1,x2,y1,y2), face_distance -0.4, depth_time)
+            poseMsg = self.get_pose((x1,x2,y1,y2), face_distance - 0.3, depth_time)
+            pose = self.get_pose((x1,x2,y1,y2), face_distance, depth_time)
+
             #print(pose)
             if face_id is not None:
                 self.known_faces[face_id].poses.append(pose)
@@ -261,8 +264,6 @@ class face_localizer:
             deleteMarker =  Marker()
             deleteMarker.header.frame_id = 'map'
             deleteMarker.action = Marker.DELETEALL
-
-            added = []
            
             if pose is not None:
                markerArray.markers.append(deleteMarker)
@@ -280,11 +281,12 @@ class face_localizer:
                         ps.orientx = ps.x - lok_robota.transform.translation.x 
                         ps.orienty = ps.y - lok_robota.transform.translation.y
                         ps.orientz = ps.z - lok_robota.transform.translation.z
-                        print( ps )
+                        #print( ps )
                         ps.id = i
                        
-                        if(i not in added):
-                            added.append(i)
+                        if(i not in self.added):
+                            print(i)
+                            self.added.append(i)
                             self.face_pub.publish(ps)
 
                         #exit(0)
