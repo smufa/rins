@@ -272,11 +272,15 @@ class face_localizer:
                     ps.x = obj.getAverage().position.x
                     ps.y = obj.getAverage().position.y
                     ps.z = obj.getAverage().position.z
+                    
+                    # handle orientations
+                    lok_robota = self.tf_buf.lookup_transform('map', 'base_link', rospy.Time(0), timeout=rospy.Duration(1))
+                    ps.orientx = ps.x - lok_robota.position.x 
+                    ps.orienty = ps.y - lok_robota.position.y
+                    ps.orientz = ps.z - lok_robota.position.z
+                    
                     ps.id = i
                     self.face_pub.publish(ps)
-                    
-                    lok_robota = self.tf_buf.lookup_transform('map', 'base_link', rospy.Time(0), timeout=rospy.Duration(1))
-                    print(lok_robota)
 
                     self.marker_num += 1
                     marker = Marker()
