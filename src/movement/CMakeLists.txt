@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2
   tf2_geometry_msgs
   actionlib_msgs
+  exercise4
 )
 
 ## System dependencies are found with CMake's conventions
@@ -113,7 +114,7 @@ find_package(OpenCV)
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES movement
-#  CATKIN_DEPENDS roscpp std_msgs
+   CATKIN_DEPENDS roscpp std_msgs exercise4
 #  DEPENDS system_lib
 )
 

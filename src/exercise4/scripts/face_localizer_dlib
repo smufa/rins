@@ -275,6 +275,9 @@ class face_localizer:
                     ps.id = i
                     self.face_pub.publish(ps)
                     
+                    lok_robota = self.tf_buf.lookup_transform('map', 'base_link', rospy.Time(0), timeout=rospy.Duration(1))
+                    print(lok_robota)
+
                     self.marker_num += 1
                     marker = Marker()
                     marker.header.stamp = rospy.Time(0)

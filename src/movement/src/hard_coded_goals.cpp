@@ -24,6 +24,7 @@ geometry_msgs::TransformStamped map_transform;
 
 ros::Publisher goal_pub;
 ros::Subscriber map_sub;
+ros::Subscriber face_sub;
 std::unique_ptr<actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction>> ac;
 
 void mapCallback(const nav_msgs::OccupancyGridConstPtr& msg_map) {
