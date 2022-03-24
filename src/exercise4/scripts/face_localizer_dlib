@@ -86,6 +86,7 @@ class face_localizer:
 
         self.known_faces = []
         self.added = []
+        self.marker_poses = []
 
     def create_marker(self, newPose):
             
@@ -244,6 +245,7 @@ class face_localizer:
                 if not face_found:
                     # zazna je bila nova faca
                     self.known_faces.append(face_group_holdr([encoding], None, []))
+                    self.marker_poses.append(face_group_holdr([], None, []))
                     face_id = len(self.known_faces)-1
                     #self.known_faces.append([encoding])
             else:
@@ -253,12 +255,14 @@ class face_localizer:
             depth_time = depth_image_message.header.stamp
             
             # Find the location of the detected face
-            poseMsg = self.get_pose((x1,x2,y1,y2), face_distance - 0.3, depth_time)
-            pose = self.get_pose((x1,x2,y1,y2), face_distance, depth_time)
+            #poseMsg = self.get_pose((x1,x2,y1,y2), face_distance - 0.3, depth_time)
+            pose = self.get_pose((x1,x2,y1,y2), face_distance - 0.4, depth_time)
+            poseMarker = self.get_pose((x1,x2,y1,y2), face_distance, depth_time)
 
             #print(pose)
             if face_id is not None:
                 self.known_faces[face_id].poses.append(pose)
+                self.marker_poses[face_id].poses.append(poseMarker)
             
             markerArray = MarkerArray()
             deleteMarker =  Marker()
@@ -289,21 +293,21 @@ class face_localizer:
                             self.added.append(i)
                             self.face_pub.publish(ps)
 
-                        #exit(0)
-                    self.marker_num += 1
-                    marker = Marker()
-                    marker.header.stamp = rospy.Time(0)
-                    marker.header.frame_id = 'map'
-                    marker.pose = obj.getAverage()
-                    marker.type = Marker.SPHERE
-                    marker.action = Marker.ADD
-                    marker.frame_locked = False
-                    marker.lifetime = rospy.Time(0)
-                    marker.id = self.marker_num
-                    marker.scale = Vector3(0.1, 0.1, 0.1)
-                    marker.color = ColorRGBA(0, 1, 0, 1)
-                    
-                    markerArray.markers.append(marker)
+                    for j, objMarker in enumerate(self.marker_poses):
+                        self.marker_num += 1
+                        marker = Marker()
+                        marker.header.stamp = rospy.Time(0)
+                        marker.header.frame_id = 'map'
+                        marker.pose = objMarker.getAverage()
+                        marker.type = Marker.SPHERE
+                        marker.action = Marker.ADD
+                        marker.frame_locked = False
+                        marker.lifetime = rospy.Time(0)
+                        marker.id = self.marker_num
+                        marker.scale = Vector3(0.1, 0.1, 0.1)
+                        marker.color = ColorRGBA(0, 1, 0, 1)
+                        
+                        markerArray.markers.append(marker)
                    
             #self.markers_pub.publish(deleteMarker)       
             self.markers_pub.publish(markerArray)

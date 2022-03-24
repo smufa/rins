@@ -23,6 +23,7 @@ using namespace cv;
 Mat cv_map;
 float map_resolution = 0.05;
 geometry_msgs::TransformStamped map_transform;
+int counter = 0;
 
 ros::Publisher goal_pub;
 ros::Subscriber map_sub;
@@ -157,12 +158,13 @@ void move(float x, float y, float z, float orientx, float orienty, float orientz
 
     ac->sendGoalAndWait(goal);
     sound->say("Hello bananana");
+    ROS_INFO("Face greeted lp.");
+    counter++;
 }
 
 void faceCallback(const exercise4::Coords goal) {
 
     move(goal.x, goal.y, goal.z, goal.orientx, goal.orienty, goal.orientz);
-    ROS_INFO("Grem do face");
 }
 
 int main(int argc, char** argv) {
@@ -184,24 +186,29 @@ int main(int argc, char** argv) {
         return 0;
     }
     
-    int goals[8][2] = {
-        {286, 268},
-        {246, 232},
-        {242, 200},
-        {288, 190},
-        {299, 230},
-        {313, 208},
-        {326, 258},
-        {283, 262}
+    int goals[9][2] = {
+        {266, 249},
+        {307, 259},
+        {280, 277},
+        {245, 271},
+        {231, 242},
+        {224, 206},
+        {257, 197},
+        {268, 243},
+        {298, 211}
     };
     //int goals[5][2] = {{250, 200}, {258, 230}, {28tf, 263}, {324, 250}, {291, 225}};
 
-    for(int i = 0; i < 8; i++) {
+    for(int i = 0; i < 9; i++) {
         ros::spinOnce();
         moveTo(goals[i][0], goals[i][1]);
         while(!ac->getState().isDone()) {
             if(!ros::ok()) return 0;
             ros::spinOnce();
+            if(counter > 2) {
+                ROS_INFO("Najdu facee");
+                return 0;
+            }
         }/* {
             ROS_INFO("Status is %s", ac->getState().toString().c_str());
         }*/

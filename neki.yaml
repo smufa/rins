@@ -1,5 +1,4 @@
 move_base:
  local_costmap: 
   inflation_layer:
-   cost_scaling_factor: 1
-   inflation_radius: 0.01
+   inflation_radius: 0.005
