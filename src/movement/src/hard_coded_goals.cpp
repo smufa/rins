@@ -2,6 +2,7 @@
 
 #include <nav_msgs/GetMap.h>
 #include <geometry_msgs/Quaternion.h>
+#include <tf2/LinearMath/Quaternion.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <tf2/transform_datatypes.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
@@ -13,7 +14,7 @@
 #include <memory>
 #include <unistd.h>
 #include <stdlib.h>
-#include "exercise4/Poses.h"
+#include "exercise4/Coords.h"
 
 using namespace std;
 using namespace cv;
@@ -28,7 +29,6 @@ ros::Subscriber face_sub;
 std::unique_ptr<actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction>> ac;
 
 void mapCallback(const nav_msgs::OccupancyGridConstPtr& msg_map) {
-    ROS_INFO("Callback triggered");
     int size_x = msg_map->info.width;
     int size_y = msg_map->info.height;
 
@@ -135,8 +135,31 @@ void moveToSimple(float x, float y) {
     ac->sendGoal(goal);
 }
 
-void faceCallback(const exercise4::Poses goal) {
-    ROS_INFO("%d", goal.id);
+void move(float x, float y, float z, float orientx, float orienty, float orientz) {
+    move_base_msgs::MoveBaseGoal goal;
+
+    goal.target_pose.pose.position.x = x;
+    goal.target_pose.pose.position.y = y;
+    goal.target_pose.pose.position.z = z;
+
+    tf2::Quaternion q(tf2::Vector3(orientx, orienty, orientz), .0);
+    goal.target_pose.pose.orientation.x = q.getX();
+    goal.target_pose.pose.orientation.y = q.getY();
+    goal.target_pose.pose.orientation.z = q.getZ();
+    goal.target_pose.pose.orientation.w = q.getW();
+    goal.target_pose.header.frame_id = "map";
+    goal.target_pose.pose.orientation.w = 1;
+    goal.target_pose.header.stamp = ros::Time::now();
+
+    ROS_INFO("Moving to (x: %f, y: %f)", x, y);
+
+    ac->sendGoalAndWait(goal);
+}
+
+void faceCallback(const exercise4::Coords goal) {
+
+    move(goal.x, goal.y, goal.z, goal.orientx, goal.orienty, goal.orientz);
+    ROS_INFO("Grem do face");
 }
 
 int main(int argc, char** argv) {
@@ -147,7 +170,7 @@ int main(int argc, char** argv) {
 	ros::Rate rate(10);
 
     map_sub = n.subscribe("map", 10, &mapCallback);
-    face_sub = n.subscribe("face_markers", 10, &faceCallback);
+    face_sub = n.subscribe("faceMarkers", 10, &faceCallback);
     ac = std::make_unique<actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction>>("move_base", true);
     while(!ac->waitForServer(ros::Duration(5.0))){
       ROS_INFO("Waiting for the move_base action server to come up");
@@ -167,13 +190,12 @@ int main(int argc, char** argv) {
         {326, 258},
         {283, 262}
     };
-    //int goals[5][2] = {{250, 200}, {258, 230}, {284, 263}, {324, 250}, {291, 225}};
+    //int goals[5][2] = {{250, 200}, {258, 230}, {28tf, 263}, {324, 250}, {291, 225}};
 
     for(int i = 0; i < 8; i++) {
         ros::spinOnce();
         moveTo(goals[i][0], goals[i][1]);
         while(!ac->getState().isDone()) {
-            //face detection
             if(!ros::ok()) return 0;
             ros::spinOnce();
         }/* {

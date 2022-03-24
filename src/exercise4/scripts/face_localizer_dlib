@@ -9,7 +9,7 @@ import tf2_geometry_msgs
 import tf2_ros
 import face_recognition
 from std_msgs.msg import String
-from exercise4.msg import Poses
+from exercise4.msg import Coords
 
 #import matplotlib.pyplot as plt
 from sensor_msgs.msg import Image
@@ -58,7 +58,7 @@ class face_localizer:
         rospy.init_node('face_localizer', anonymous=True)
         
         # Create a publisher for publishing goals
-        self.face_pub = rospy.Publisher('/faceMarkers', Poses, queue_size=10)        
+        self.face_pub = rospy.Publisher('/faceMarkers', Coords, queue_size=10)        
 
         # An object we use for converting images between ROS format and OpenCV format
         self.bridge = CvBridge()
@@ -252,8 +252,8 @@ class face_localizer:
             depth_time = depth_image_message.header.stamp
             
             # Find the location of the detected face
-            pose = self.get_pose((x1,x2,y1,y2), face_distance, depth_time)
-            print(pose)
+            pose = self.get_pose((x1,x2,y1,y2), face_distance -0.4, depth_time)
+            #print(pose)
             if face_id is not None:
                 self.known_faces[face_id].poses.append(pose)
             
@@ -261,27 +261,33 @@ class face_localizer:
             deleteMarker =  Marker()
             deleteMarker.header.frame_id = 'map'
             deleteMarker.action = Marker.DELETEALL
+
+            added = []
            
             if pose is not None:
                markerArray.markers.append(deleteMarker)
                for i, obj in enumerate(self.known_faces):
-                    # broadcast img positions
-                    # TOODOOOO ORIENTATIONSSSSS
-                    ps = Poses()
+                    ps = Coords()
                     # print(ps)
                     ps.x = obj.getAverage().position.x
                     ps.y = obj.getAverage().position.y
                     ps.z = obj.getAverage().position.z
-                    
+                
                     # handle orientations
                     lok_robota = self.tf_buf.lookup_transform('map', 'base_link', rospy.Time(0), timeout=rospy.Duration(1))
-                    ps.orientx = ps.x - lok_robota.position.x 
-                    ps.orienty = ps.y - lok_robota.position.y
-                    ps.orientz = ps.z - lok_robota.position.z
-                    
-                    ps.id = i
-                    self.face_pub.publish(ps)
+                    #print(lok_robota)
+                    if lok_robota is not None:
+                        ps.orientx = ps.x - lok_robota.transform.translation.x 
+                        ps.orienty = ps.y - lok_robota.transform.translation.y
+                        ps.orientz = ps.z - lok_robota.transform.translation.z
+                        print( ps )
+                        ps.id = i
+                       
+                        if(i not in added):
+                            added.append(i)
+                            self.face_pub.publish(ps)
 
+                        #exit(0)
                     self.marker_num += 1
                     marker = Marker()
                     marker.header.stamp = rospy.Time(0)
