@@ -59,6 +59,7 @@ class face_localizer:
         
         # Create a publisher for publishing goals
         self.face_pub = rospy.Publisher('/faceMarkers', Coords, queue_size=10)        
+        self.face_send = rospy.Publisher('/detected', Image, queue_size=10)        
 
         # An object we use for converting images between ROS format and OpenCV format
         self.bridge = CvBridge()
@@ -198,6 +199,7 @@ class face_localizer:
 
             # Extract region containing face
             face_region = rgb_image[y1:y2,x1:x2]
+            
 
             # Visualize the extracted face
             # cv2.imshow("Depth window", face_region)
@@ -290,6 +292,7 @@ class face_localizer:
                        
                         if(i not in self.added):
                             print(i)
+                            self.face_send.publish((self.bridge.cv2_to_imgmsg(face_region, encoding="bgr8")))
                             self.added.append(i)
                             self.face_pub.publish(ps)
 
